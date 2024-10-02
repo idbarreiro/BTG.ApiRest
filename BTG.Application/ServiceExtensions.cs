@@ -1,5 +1,7 @@
 ﻿using BTG.Application.Behaviors;
+using BTG.Application.Interfaces;
 using BTG.Application.Services;
+using BTG.Domain.Entities;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,8 +24,10 @@ namespace BTG.Application
             services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
             services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
             services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationsBehavior<,>));
-            services.AddTransient<EmailService>();
-            services.AddTransient<SmsService>();
+
+            #region Services
+            services.AddTransient(typeof(INotificationTransactionServiceAsync), typeof(NotificationTransactionService));
+            #endregion
         }
     }
 }

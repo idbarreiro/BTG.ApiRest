@@ -6,13 +6,13 @@ namespace BTG.Application.Features.Transactions.Commands.CreateTransactionComman
     {
         public CreateTransactionCommandValidator()
         {
-            RuleFor(Rule => Rule.FundId).NotEmpty();
+            RuleFor(Rule => Rule.Fund.FundId).NotEmpty();
 
-            RuleFor(Rule => Rule.FundName)
+            RuleFor(Rule => Rule.Fund.Name)
                 .NotEmpty().WithMessage("{PropertyName} es requerido.")
                 .NotNull();
 
-            RuleFor(Rule => Rule.Amount)
+            RuleFor(Rule => Rule.Fund.MinAmount)
                 .NotEmpty().WithMessage("{PropertyName} es requerido.")
                 .NotNull()
                 .GreaterThan(0).WithMessage("{PropertyName} debe ser mayor que 0.");

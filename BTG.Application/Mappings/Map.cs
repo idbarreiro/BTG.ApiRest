@@ -11,6 +11,7 @@ namespace BTG.Application.Mappings
         {
             #region DTOs
             CreateMap<Transaction, TransactionDto>();
+            CreateMap<Fund, FundDto>();
             #endregion
 
             #region Commands

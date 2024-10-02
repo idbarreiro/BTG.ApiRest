@@ -8,9 +8,9 @@ namespace BTG.Api.Controllers.v1
     [ApiVersion("1.0")]
     public class TransactionController : BasicApiController
     {
-        //Post api/v1/transactions/fund-suscribe
+        //Post api/v1/transactions/CreateTransaction
         [HttpPost]
-        public async Task<IActionResult> FundSuscribe([FromBody] CreateTransactionCommand command)
+        public async Task<IActionResult> CreateTransaction([FromBody] CreateTransactionCommand command)
         {
             return Ok(await Mediator.Send(command));
         }

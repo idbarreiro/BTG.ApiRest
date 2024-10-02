@@ -15,10 +15,17 @@ namespace BTG.Persistence.Context
             _database = client.GetDatabase(settings.Value.DatabaseName);
         }
 
-        public IMongoCollection<Transaction> GetCollection<T>(string name)
+        #region Collections
+        public IMongoCollection<Fund> GetCollectionFund<T>(string name)
+        {
+            return _database.GetCollection<Fund>(name);
+        }
+
+        public IMongoCollection<Transaction> GetCollectionTransaction<T>(string name)
         {
             return _database.GetCollection<Transaction>(name);
         }
+        #endregion
 
     }
 }

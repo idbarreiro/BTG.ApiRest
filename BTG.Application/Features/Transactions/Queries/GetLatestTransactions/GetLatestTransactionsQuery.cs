@@ -11,10 +11,10 @@ namespace BTG.Application.Features.Transactions.Queries.GetLatestTransactions
     {
         public class GetLatestTransactionsQueryHandler : IRequestHandler<GetLatestTransactionsQuery, Response<IEnumerable<TransactionDto>>>
         {
-            private readonly IRepositoryAsync<Transaction> _repositoryAsync;
+            private readonly ITransactionRepositoryAsync<Transaction> _repositoryAsync;
             private readonly IMapper _mapper;
 
-            public GetLatestTransactionsQueryHandler(IRepositoryAsync<Transaction> repositoryAsync, IMapper mapper)
+            public GetLatestTransactionsQueryHandler(ITransactionRepositoryAsync<Transaction> repositoryAsync, IMapper mapper)
             {
                 _repositoryAsync = repositoryAsync;
                 _mapper = mapper;
@@ -22,7 +22,7 @@ namespace BTG.Application.Features.Transactions.Queries.GetLatestTransactions
 
             public async Task<Response<IEnumerable<TransactionDto>>> Handle(GetLatestTransactionsQuery request, CancellationToken cancellationToken)
             {
-                var transactions = await _repositoryAsync.GetLatestAsync();
+                var transactions = await _repositoryAsync.GetLatestTransactionsAsync();
                 if (transactions.Count() == 0)
                 {
                     throw new KeyNotFoundException($"No hay transacciones realizadas.");

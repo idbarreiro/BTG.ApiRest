@@ -17,7 +17,8 @@ namespace BTG.Persistence
             services.AddSingleton<ApplicationDbContext>();
 
             #region Repositories
-            services.AddTransient(typeof(IRepositoryAsync<Transaction>), typeof(MyRepositoryAsync<Transaction>));
+            services.AddTransient(typeof(IFundRepositoryAsync<Fund>), typeof(FundRepositoryAsync<Fund>));
+            services.AddTransient(typeof(ITransactionRepositoryAsync<Transaction>), typeof(TransactionRepositoryAsync<Transaction>));
             #endregion
 
         }

@@ -10,56 +10,49 @@ namespace BTG.Application.Features.Transactions.Commands.CreateTransactionComman
 {
     public class CreateTransactionCommand : IRequest<Response<string>>
     {
-        public int FundId { get; set; }
-        public string FundName { get; set; }
-        public decimal Amount { get; set; }
-        public string Type { get; set; }
+        public int Type { get; set; }
         public DateTime Date { get; set; }
+        public Fund Fund { get; set; }
         public Client Client { get; set; }
     }
 
     public class CreateTransactionCommandHandler : IRequestHandler<CreateTransactionCommand, Response<string>>
     {
-        private readonly IRepositoryAsync<Transaction> _repositoryAsync;
+        private readonly ITransactionRepositoryAsync<Transaction> _repositoryAsync;
         private readonly IMapper _mapper;
-        private readonly EmailService _emailService;
-        private readonly SmsService _smsService;
 
-        public CreateTransactionCommandHandler(IRepositoryAsync<Transaction> repositoryAsync, IMapper mapper, EmailService emailService, SmsService smsService)
+        public CreateTransactionCommandHandler(ITransactionRepositoryAsync<Transaction> repositoryAsync, IMapper mapper)
         {
             _repositoryAsync = repositoryAsync;
             _mapper = mapper;
-            _emailService = emailService;
-            _smsService = smsService;
         }
 
         public async Task<Response<string>> Handle(CreateTransactionCommand request, CancellationToken cancellationToken)
         {
             var transaction = _mapper.Map<Transaction>(request);
             var newTransaction = await HandleTransaction(transaction);
-            await _repositoryAsync.InsertAsync(newTransaction);
-            await sendNotification(newTransaction);
+            await _repositoryAsync.InsertTransactionAsync(newTransaction);            
             return new Response<string>(newTransaction.Id.ToString());
         }
 
         private async Task<Transaction> HandleTransaction(Transaction transaction)
         {
-            var lastTransactionByFund = await _repositoryAsync.GetLastByFundIdAsync(transaction.FundId);
+            var lastTransactionByFundId = await _repositoryAsync.GetLastTransactionByFundIdAsync(transaction.Fund.FundId);
 
-            if (lastTransactionByFund == null)
+            if (lastTransactionByFundId == null)
             {
-                if (transaction.Type == "suscripcion")
+                if (transaction.Type == 1)
                 {
                     await HandleFirstTransactionAsync(transaction);
                 }
                 else
                 {
-                    HandleSubsequentTransaction(lastTransactionByFund, transaction);
+                    HandleSubsequentTransaction(lastTransactionByFundId, transaction);
                 }
             }
             else
             {
-                HandleSubsequentTransaction(transaction, lastTransactionByFund);
+                HandleSubsequentTransaction(transaction, lastTransactionByFundId);
             }
 
             transaction.Date = DateTime.Now;
@@ -68,39 +61,39 @@ namespace BTG.Application.Features.Transactions.Commands.CreateTransactionComman
 
         private async Task HandleFirstTransactionAsync(Transaction transaction)
         {
-            var lastTransaction = await _repositoryAsync.GetLastAsync();
+            var lastTransaction = await _repositoryAsync.GetLastTransactionAsync();
 
             if (lastTransaction == null)
             {
-                transaction.Client.Estimate = 500000 - transaction.Amount;
+                transaction.Client.Estimate = 500000 - transaction.Fund.MinAmount;
             }
             else
             {
-                ValidateAmount(transaction.Amount, lastTransaction.Client.Estimate, transaction.FundName);
-                transaction.Client.Estimate = lastTransaction.Client.Estimate - transaction.Amount;
+                ValidateAmount(transaction.Fund.MinAmount, lastTransaction.Client.Estimate, transaction.Fund.Name);
+                transaction.Client.Estimate = lastTransaction.Client.Estimate - transaction.Fund.MinAmount;
             }
         }
 
-        private void HandleSubsequentTransaction(Transaction transaction, Transaction lastTransactionByFund)
+        private void HandleSubsequentTransaction(Transaction transaction, Transaction lastTransactionByFundId)
         {
-            if (transaction.Type == "suscripcion")
+            if (transaction.Type == 1)
             {
-                if (lastTransactionByFund.Type == "suscripcion")
+                if (lastTransactionByFundId.Type == 1)
                 {
-                    throw new ApiException("Ya tiene una suscripción activa en el fondo " + transaction.FundName);
+                    throw new ApiException("Ya tiene una suscripción activa en el fondo " + transaction.Fund.Name);
                 }
 
-                ValidateAmount(transaction.Amount, lastTransactionByFund.Client.Estimate, transaction.FundName);
-                transaction.Client.Estimate = lastTransactionByFund.Client.Estimate - transaction.Amount;
+                ValidateAmount(transaction.Fund.MinAmount, lastTransactionByFundId.Client.Estimate, transaction.Fund.Name);
+                transaction.Client.Estimate = lastTransactionByFundId.Client.Estimate - transaction.Fund.MinAmount;
             }
-            else if (transaction.Type == "cancelacion")
+            else if (transaction.Type == 2)
             {
-                if (lastTransactionByFund == null || lastTransactionByFund.Type == "cancelacion" )
+                if (lastTransactionByFundId == null || lastTransactionByFundId.Type == 2 )
                 {
-                    throw new ApiException("No tiene una suscripción activa en el fondo " + transaction.FundName);
+                    throw new ApiException("No tiene una suscripción activa en el fondo " + transaction.Fund.Name);
                 }
 
-                transaction.Client.Estimate = lastTransactionByFund.Client.Estimate + transaction.Amount;
+                transaction.Client.Estimate = lastTransactionByFundId.Client.Estimate + transaction.Fund.MinAmount;
             }
             else
             {
@@ -108,26 +101,11 @@ namespace BTG.Application.Features.Transactions.Commands.CreateTransactionComman
             }
         }
 
-        private void ValidateAmount(decimal transactionAmount, decimal clientEstimate, string fundName)
+        private void ValidateAmount(decimal fundMinAmount, decimal clientEstimate, string fundName)
         {
-            if (transactionAmount > clientEstimate)
+            if (fundMinAmount > clientEstimate)
             {
                 throw new ApiException("No tiene saldo disponible para vincularse al fondo " + fundName);
-            }
-        }
-
-        private async Task sendNotification(Transaction transaction)
-        {
-            if (transaction.Client.TypeNotification == "email")
-            {
-                var subject = "Notificación de Suscripción";
-                var body = "Se ha realizado una suscripción al fondo " + transaction.FundName + " por un valor de " + transaction.Amount;
-                await _emailService.SendEmailAsync(transaction.Client.Email, subject, body);
-            }
-            else
-            {
-                var message = "Se ha realizado una suscripción al fondo " + transaction.FundName + " por un valor de " + transaction.Amount;
-                _smsService.SendSms(transaction.Client.Phone, message);
             }
         }
     }

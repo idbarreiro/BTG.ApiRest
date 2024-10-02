@@ -1,14 +1,26 @@
-﻿using MailKit.Net.Smtp;
+﻿using BTG.Application.Interfaces;
+using MailKit.Net.Smtp;
 using MimeKit;
+using Twilio;
+using Twilio.Rest.Api.V2010.Account;
+using Twilio.Types;
 
 namespace BTG.Application.Services
 {
-    public class EmailService
+    public class NotificationTransactionService : INotificationTransactionServiceAsync
     {
         private readonly string _smtpServer = "{ServerSmtp}"; // Cambia por tu servidor SMTP
         private readonly int _smtpPort = 587; // Puerto del servidor
         private readonly string _smtpUsername = "{UsetSmtp}";
         private readonly string _smtpPassword = "{PasswordSmtp}";
+
+        private readonly string _accountSid = "{SidTwilio}"; // Obtén esto de Twilio
+        private readonly string _authToken = "{TokenTwilio}"; // Obtén esto de Twilio
+
+        public NotificationTransactionService()
+        {
+            TwilioClient.Init(_accountSid, _authToken);
+        }
 
         public async Task SendEmailAsync(string toEmail, string subject, string message)
         {
@@ -27,6 +39,16 @@ namespace BTG.Application.Services
                 await client.SendAsync(emailMessage);
                 client.Disconnect(true);
             }
+        }
+
+        public void SendSms(string toPhoneNumber, string message)
+        {
+            var messageOptions = new CreateMessageOptions(new PhoneNumber(toPhoneNumber))
+            {
+                From = new PhoneNumber("{PhoneSend}"), // Tu número Twilio
+                Body = message
+            };
+            var msg = MessageResource.Create(messageOptions);
         }
     }
 }
